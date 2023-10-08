@@ -61,6 +61,8 @@
 ///
 ///         }
 ///     }
+/// 
+/// Usage:
 ///
 ///     let cat = Cat()
 ///     cat[.name] = "Snowball"

@@ -92,7 +92,7 @@ return nil
     }
     
     func propetiesEnumDecl() throws -> EnumDeclSyntax {
-        try EnumDeclSyntax("enum \(raw: enumTitle): CaseIterable") {
+        try EnumDeclSyntax("enum \(raw: enumTitle): String, CaseIterable") {
             for id in ids {
                 try EnumCaseDeclSyntax("case \(id)")
             }

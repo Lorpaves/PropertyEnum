@@ -17,20 +17,20 @@ final class PropertyEnumTests: XCTestCase {
         assertMacroExpansion(
 """
 @PropertySC
-class Cat {
-     let bleed: String? = nil
-     var name: String = "Snow"
-     let age: Int = 1
-     var isIndoorCat: Bool? = true
+class JSONScehmaPropertyWrapper {
+    var minItems: Int? = nil
+    @Published var maxItems: Int = 0
+    let uniqueItems: Bool? = nil
 }
+
 """,
 expandedSource: """
 
-class Cat {
-     let bleed: String? = nil
-     var name: String = "Snow"
-     let age: Int = 1
-     var isIndoorCat: Bool? = true
+class Cat: ObservableObject {
+    let bleed: String? = nil
+    @Published var name: String = "Snow"
+    let age: Int = 1
+    @Published var isIndoorCat: Bool? = true
 
     enum Properties: CaseIterable {
         case bleed

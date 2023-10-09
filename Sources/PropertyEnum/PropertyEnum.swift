@@ -79,7 +79,7 @@
 ///     Optional(1)
 ///     Optional(true)
 ///     --
-@attached(member)
+@attached(member, names: arbitrary)
 public macro PropertySC() = #externalMacro(module: "PropertyEnumMacros", type: "PropertySubscriptMacro")
 
 

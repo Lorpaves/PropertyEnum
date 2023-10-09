@@ -9,20 +9,15 @@ import SwiftCompilerPlugin
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
-struct DeclType {
-    var type: TokenSyntax
-    var isOptional: Bool
-    var rawType: String {
-        var rawType: String = type.text
-        if isOptional { rawType = rawType + "?" }
-        return rawType
-    }
-}
+
+
+
 struct DeclSyntaxMembersWrapper {
     
     let members: MemberBlockItemListSyntax
     
     var enumTitle: String = "Properties"
+    
     private var attribues: [VariableDeclSyntax] {
         members.compactMap { $0.decl.as(VariableDeclSyntax.self) }
     }
@@ -32,43 +27,47 @@ struct DeclSyntaxMembersWrapper {
         attribues.compactMap { $0.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier }
     }
     
-    /// The name of each settable property
-    private var settableIDs: [TokenSyntax] {
-        attribues.compactMap { decl -> TokenSyntax? in
-            guard let binding = decl.bindings.first else { return nil }
-            if let accessors = binding.accessorBlock?.accessors.as(AccessorDeclListSyntax.self ),
-               accessors.first(where: { $0.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
-              
-                return nil
-            }
-            else if decl.bindingSpecifier.tokenKind == .keyword(.var) {
-                return binding.pattern.as(IdentifierPatternSyntax.self)?.identifier
-            }
-            return nil
-        }
-    }
-    
     /// The type of each settable property
-    private var settableTypes: [DeclType] {
-        attribues.compactMap { decl -> DeclType? in
+    private var settableTypes: [DeclLiteralSyntax] {
+        attribues.compactMap { decl -> DeclLiteralSyntax? in
             guard let binding = decl.bindings.first else { return nil }
+            
             if let accessors = binding.accessorBlock?.accessors.as(AccessorDeclListSyntax.self),
                accessors.first(where: { $0.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
               
                 return nil
             }
             else if decl.bindingSpecifier.tokenKind == .keyword(.var) {
-                if let noneOptinalType = binding.typeAnnotation?.type.as(IdentifierTypeSyntax.self) {
-                    return DeclType(type: noneOptinalType.name, isOptional: false)
-                }
-                else if let optionalType = binding.typeAnnotation?.type.as(OptionalTypeSyntax.self) {
-                    if let typeLiteral = optionalType.wrappedType.as(IdentifierTypeSyntax.self)?.name {
-                        return DeclType(type: typeLiteral, isOptional: true)
-                    }
-                }
+                guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier,  let type = getCustomTypeLiteral(annotation: binding.typeAnnotation!) else { return nil }
+               
+                return DeclLiteralSyntax(type: type, name: name)
+               
             }
             return nil
         }
+    }
+     func getCustomTypeLiteral(annotation: some SyntaxProtocol) -> TokenSyntax? {
+         guard let annotation = annotation.as(TypeAnnotationSyntax.self) else { return nil }
+         let typeSyntax = annotation.type
+         switch typeSyntax.kind {
+         case .arrayType:
+             if let identifierTypeSyntax = typeSyntax.as(ArrayTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+         case .tupleType:
+             if let identifierTypeSyntax = typeSyntax.as(TupleTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+         case .memberType:
+             if let identifierTypeSyntax = typeSyntax.as(MemberTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+         case .optionalType:
+             if let identifierTypeSyntax = typeSyntax.as(OptionalTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+         case .dictionaryType:
+             if let identifierTypeSyntax = typeSyntax.as(DictionaryTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+         case .identifierType:
+             if let identifierTypeSyntax = typeSyntax.as(IdentifierTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+         default: return nil
+         }
+
+
+return nil
+         
     }
     
     func propetiesEnumDecl() throws -> EnumDeclSyntax {
@@ -94,30 +93,33 @@ struct DeclSyntaxMembersWrapper {
         }
     }
     func subscriptSetSwitchExprSyntax() throws -> SwitchExprSyntax {
-        
+        let needDefaultBreak = settableTypes.count != self.ids.count
         return try SwitchExprSyntax("switch property") {
-            for (id, type) in zip(settableIDs, settableTypes) {
+            for type in  settableTypes {
                 
-                let guardDecl = try GuardStmtSyntax("guard let newValue = newValue as? \(raw: type.rawType), self.\(id) != newValue else") {
+                let guardDecl = try GuardStmtSyntax("guard let newValue = newValue as? \(type.type), self.\(type.name) != newValue else") {
                     ReturnStmtSyntax()
                 }
                 SwitchCaseSyntax(
                     """
                     
-                    case .\(id):
+                    case .\(type.name):
                         \(guardDecl)
-                        self.\(id) = newValue
+                        self.\(type.name) = newValue
                     
                     """
                 )
             }
-            SwitchCaseSyntax(
-                """
-                
-                default: break
-                
-                """
-            )
+            if needDefaultBreak {
+                SwitchCaseSyntax(
+                    """
+                    
+                    default: break
+                    
+                    """
+                )
+            }
+            
         }
     }
     func subscriptDelcSyntax() throws -> SubscriptDeclSyntax {

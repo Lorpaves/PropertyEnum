@@ -33,7 +33,7 @@ public struct PropertySubscriptProtocolMacro: PeerMacro {
         let members = protocolDecl.memberBlock.members
         
         let name = protocolDecl.name
-        
+       
         let memberWrapper = DeclSyntaxMembersWrapper(members: members, enumTitle: "\(name.text)Properties")
         
         let propertiesEnumDeclSyntax = try memberWrapper.propetiesEnumDecl()

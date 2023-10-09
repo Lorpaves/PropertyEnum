@@ -10,8 +10,6 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-
-
 struct DeclSyntaxMembersWrapper {
     
     let members: MemberBlockItemListSyntax
@@ -31,14 +29,31 @@ struct DeclSyntaxMembersWrapper {
     private var settableTypes: [DeclLiteralSyntax] {
         attribues.compactMap { decl -> DeclLiteralSyntax? in
             guard let binding = decl.bindings.first else { return nil }
-            
-            if let accessors = binding.accessorBlock?.accessors.as(AccessorDeclListSyntax.self),
-               accessors.first(where: { $0.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
-              
+            let ignored = decl
+                .attributes
+                .compactMap {
+                    $0.as(AttributeSyntax.self)?
+                        .attributeName
+                        .as(IdentifierTypeSyntax.self)?
+                        .name
+                        .tokenKind == .identifier("ignore")
+                }
+                .count > 0
+            if ignored { return nil }
+            if let accessors = binding
+                .accessorBlock?
+                .accessors
+                .as(AccessorDeclListSyntax.self),
+               accessors
+                .first(where: { $0.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
+                
                 return nil
             }
-            else if let itemListSyntax = binding.accessorBlock?.accessors.as(CodeBlockItemListSyntax.self)
-                    
+            else if let itemListSyntax = binding
+                .accessorBlock?
+                .accessors
+                .as(CodeBlockItemListSyntax.self)
+                        
             {
                 if itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.get) }) != nil, itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
                     return nil
@@ -56,7 +71,7 @@ struct DeclSyntaxMembersWrapper {
             else if decl.bindingSpecifier.tokenKind == .keyword(.var) {
                 
                 return typeInPatternBindingSyntax(binding, typeIsBinding: false)
-               
+                
             }
             return nil
         }
@@ -64,31 +79,31 @@ struct DeclSyntaxMembersWrapper {
     
     func typeInPatternBindingSyntax(_ binding: PatternBindingSyntax, typeIsBinding: Bool) -> DeclLiteralSyntax? {
         guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier, let typeAnnotation = binding.typeAnnotation, let type = getCustomTypeLiteral(annotation: typeAnnotation) else { return nil }
-       
+        
         return DeclLiteralSyntax(type: type, name: name, isBinding: typeIsBinding)
     }
-     func getCustomTypeLiteral(annotation: some SyntaxProtocol) -> TokenSyntax? {
-         guard let annotation = annotation.as(TypeAnnotationSyntax.self) else { return nil }
-         let typeSyntax = annotation.type
-         switch typeSyntax.kind {
-         case .arrayType:
-             if let identifierTypeSyntax = typeSyntax.as(ArrayTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
-         case .tupleType:
-             if let identifierTypeSyntax = typeSyntax.as(TupleTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
-         case .memberType:
-             if let identifierTypeSyntax = typeSyntax.as(MemberTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
-         case .optionalType:
-             if let identifierTypeSyntax = typeSyntax.as(OptionalTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
-         case .dictionaryType:
-             if let identifierTypeSyntax = typeSyntax.as(DictionaryTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
-         case .identifierType:
-             if let identifierTypeSyntax = typeSyntax.as(IdentifierTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
-         default: return nil
-         }
-
-
-return nil
-         
+    func getCustomTypeLiteral(annotation: some SyntaxProtocol) -> TokenSyntax? {
+        guard let annotation = annotation.as(TypeAnnotationSyntax.self) else { return nil }
+        let typeSyntax = annotation.type
+        switch typeSyntax.kind {
+        case .arrayType:
+            if let identifierTypeSyntax = typeSyntax.as(ArrayTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+        case .tupleType:
+            if let identifierTypeSyntax = typeSyntax.as(TupleTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+        case .memberType:
+            if let identifierTypeSyntax = typeSyntax.as(MemberTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+        case .optionalType:
+            if let identifierTypeSyntax = typeSyntax.as(OptionalTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+        case .dictionaryType:
+            if let identifierTypeSyntax = typeSyntax.as(DictionaryTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+        case .identifierType:
+            if let identifierTypeSyntax = typeSyntax.as(IdentifierTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
+        default: return nil
+        }
+        
+        
+        return nil
+        
     }
     
     func propetiesEnumDecl() throws -> EnumDeclSyntax {

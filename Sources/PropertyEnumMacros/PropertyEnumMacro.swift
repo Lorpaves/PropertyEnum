@@ -45,10 +45,18 @@ public struct PropertySubscriptProtocolMacro: PeerMacro {
         return [DeclSyntax(propertiesEnumDeclSyntax), DeclSyntax(extensionDeclSyntax)]
     }
 }
+
+public struct PropertyIgnoreMacro: MemberMacro {
+    public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+//        guard declaration.as(Iden)
+        return []
+    }
+}
 @main
 struct PropertyEnumPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         PropertySubscriptMacro.self,
-        PropertySubscriptProtocolMacro.self
+        PropertySubscriptProtocolMacro.self,
+        PropertyIgnoreMacro.self
     ]
 }

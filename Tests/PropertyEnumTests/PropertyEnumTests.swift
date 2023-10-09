@@ -8,7 +8,8 @@ import PropertyEnumMacros
 
 let testMacros: [String: Macro.Type] = [
     "PropertySC": PropertySubscriptMacro.self,
-    "PropertyP": PropertySubscriptProtocolMacro.self
+    "PropertyP": PropertySubscriptProtocolMacro.self,
+    "ignore": PropertyIgnoreMacro.self
 ]
 #endif
 
@@ -18,14 +19,14 @@ final class PropertyEnumTests: XCTestCase {
 """
 @PropertySC
 class JSONScehmaPropertyWrapper {
-    var uniqueItems: Binding<Bool?>? {
+    @ignore var uniqueItems: Binding<Bool?>? {
         Binding {
             self.type
         } set: { newValue in
             self[.type] = newValue
         }
     }
-    
+    var a: String = "2"
     var age: Int {
         let a = 20
         return a

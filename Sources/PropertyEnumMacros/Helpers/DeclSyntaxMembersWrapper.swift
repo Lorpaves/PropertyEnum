@@ -43,18 +43,29 @@ struct DeclSyntaxMembersWrapper {
                 if itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.get) }) != nil, itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
                     return nil
                 }
+                else if itemListSyntax.first(where: { $0.as(CodeBlockItemSyntax.self)?.item.as(FunctionCallExprSyntax.self)?.calledExpression.as(DeclReferenceExprSyntax.self)?.baseName.text == "Binding" }) != nil {
+                    
+                    return typeInPatternBindingSyntax(binding, typeIsBinding: true)
+                }
+                else if itemListSyntax.first(where: { $0.as(CodeBlockItemSyntax.self)?.item.as(ReturnStmtSyntax.self)?.expression?.as(FunctionCallExprSyntax.self)?.calledExpression.as(DeclReferenceExprSyntax.self)?.baseName.text == "Binding" }) != nil {
+                    return typeInPatternBindingSyntax(binding, typeIsBinding: true)
+                }
                 return nil
                 
             }
             else if decl.bindingSpecifier.tokenKind == .keyword(.var) {
                 
-                guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier,  let type = getCustomTypeLiteral(annotation: binding.typeAnnotation!) else { return nil }
-               
-                return DeclLiteralSyntax(type: type, name: name)
+                return typeInPatternBindingSyntax(binding, typeIsBinding: false)
                
             }
             return nil
         }
+    }
+    
+    func typeInPatternBindingSyntax(_ binding: PatternBindingSyntax, typeIsBinding: Bool) -> DeclLiteralSyntax? {
+        guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier, let typeAnnotation = binding.typeAnnotation, let type = getCustomTypeLiteral(annotation: typeAnnotation) else { return nil }
+       
+        return DeclLiteralSyntax(type: type, name: name, isBinding: typeIsBinding)
     }
      func getCustomTypeLiteral(annotation: some SyntaxProtocol) -> TokenSyntax? {
          guard let annotation = annotation.as(TypeAnnotationSyntax.self) else { return nil }
@@ -106,8 +117,8 @@ return nil
         let needDefaultBreak = settableTypes.count != self.ids.count
         return try SwitchExprSyntax("switch property") {
             for type in  settableTypes {
-                
-                let guardDecl = try GuardStmtSyntax("guard let newValue = newValue as? \(type.type), self.\(type.name) != newValue else") {
+                let additionalCalled = type.isBinding ? ".wrappedValue" : ""
+                let guardDecl = try GuardStmtSyntax("guard let newValue = newValue as? \(type.realType), self.\(type.name)\(raw: additionalCalled) != newValue else") {
                     ReturnStmtSyntax()
                 }
                 SwitchCaseSyntax(
@@ -115,7 +126,7 @@ return nil
                     
                     case .\(type.name):
                         \(guardDecl)
-                        self.\(type.name) = newValue
+                        self.\(type.name)\(raw: additionalCalled) = newValue
                     
                     """
                 )

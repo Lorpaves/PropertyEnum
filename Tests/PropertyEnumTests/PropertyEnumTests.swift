@@ -20,7 +20,25 @@ final class PropertyEnumTests: XCTestCase {
 class JSONScehmaPropertyWrapper {
     var minItems: Int? = nil
     @Published var maxItems: Int = 0
-    let uniqueItems: Bool? = nil
+    var uniqueItems: Binding<Bool?> {
+        Binding {
+            self.type
+        } set: { newValue in
+            self[.type] = newValue
+        }
+    }
+    var name: String {
+        get {
+            self.format
+        }
+        set {
+        
+        }
+    var age: Int {
+        let a = 20
+        return a
+    }
+    }
 }
 
 """,

@@ -37,7 +37,17 @@ struct DeclSyntaxMembersWrapper {
               
                 return nil
             }
+            else if let itemListSyntax = binding.accessorBlock?.accessors.as(CodeBlockItemListSyntax.self)
+                    
+            {
+                if itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.get) }) != nil, itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
+                    return nil
+                }
+                return nil
+                
+            }
             else if decl.bindingSpecifier.tokenKind == .keyword(.var) {
+                
                 guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier,  let type = getCustomTypeLiteral(annotation: binding.typeAnnotation!) else { return nil }
                
                 return DeclLiteralSyntax(type: type, name: name)

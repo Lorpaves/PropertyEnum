@@ -17,29 +17,25 @@ struct DeclSyntaxMembersWrapper {
     var enumTitle: String = "Properties"
     
     private var attribues: [VariableDeclSyntax] {
-        members.compactMap { $0.decl.as(VariableDeclSyntax.self) }
+        members.compactMap { member -> VariableDeclSyntax? in
+            member.decl.as(VariableDeclSyntax.self)
+        }
     }
-    
+     
     /// The name of each property
     private var ids: [TokenSyntax] {
-        attribues.compactMap { $0.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier }
+        attribues.compactMap { attribue -> TokenSyntax? in
+            if attribue.ignored { return nil }
+            return attribue.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier
+        }
     }
     
     /// The type of each settable property
     private var settableTypes: [DeclLiteralSyntax] {
         attribues.compactMap { decl -> DeclLiteralSyntax? in
             guard let binding = decl.bindings.first else { return nil }
-            let ignored = decl
-                .attributes
-                .compactMap {
-                    $0.as(AttributeSyntax.self)?
-                        .attributeName
-                        .as(IdentifierTypeSyntax.self)?
-                        .name
-                        .tokenKind == .identifier("ignore")
-                }
-                .count > 0
-            if ignored { return nil }
+           
+            if decl.ignored { return nil }
             if let accessors = binding
                 .accessorBlock?
                 .accessors
@@ -55,7 +51,8 @@ struct DeclSyntaxMembersWrapper {
                 .as(CodeBlockItemListSyntax.self)
                         
             {
-                if itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.get) }) != nil, itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
+                if itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.get) }) != nil, 
+                    itemListSyntax.first(where: { $0.as(AccessorDeclSyntax.self)?.accessorSpecifier.tokenKind == .keyword(.set) }) == nil {
                     return nil
                 }
                 else if itemListSyntax.first(where: { $0.as(CodeBlockItemSyntax.self)?.item.as(FunctionCallExprSyntax.self)?.calledExpression.as(DeclReferenceExprSyntax.self)?.baseName.text == "Binding" }) != nil {
@@ -78,7 +75,9 @@ struct DeclSyntaxMembersWrapper {
     }
     
     func typeInPatternBindingSyntax(_ binding: PatternBindingSyntax, typeIsBinding: Bool) -> DeclLiteralSyntax? {
-        guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier, let typeAnnotation = binding.typeAnnotation, let type = getCustomTypeLiteral(annotation: typeAnnotation) else { return nil }
+        guard let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier, 
+                let typeAnnotation = binding.typeAnnotation, let type = getCustomTypeLiteral(annotation: typeAnnotation) 
+        else { return nil }
         
         return DeclLiteralSyntax(type: type, name: name, isBinding: typeIsBinding)
     }
@@ -86,7 +85,7 @@ struct DeclSyntaxMembersWrapper {
         guard let annotation = annotation.as(TypeAnnotationSyntax.self) else { return nil }
         let typeSyntax = annotation.type
         switch typeSyntax.kind {
-        case .arrayType:
+            case .arrayType:
             if let identifierTypeSyntax = typeSyntax.as(ArrayTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }
         case .tupleType:
             if let identifierTypeSyntax = typeSyntax.as(TupleTypeSyntax.self) { return TokenSyntax("\(raw: identifierTypeSyntax.description)") }

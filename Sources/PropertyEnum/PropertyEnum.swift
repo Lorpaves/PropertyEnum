@@ -82,7 +82,7 @@
 @attached(member, names: arbitrary)
 public macro PropertySC() = #externalMacro(module: "PropertyEnumMacros", type: "PropertySubscriptMacro")
 
-@attached(memberAttribute)
+@attached(peer)
 public macro ignore() = #externalMacro(module: "PropertyEnumMacros", type: "PropertyIgnoreMacro")
 
 /// Same as @PropertySC, but using the extension and generating a

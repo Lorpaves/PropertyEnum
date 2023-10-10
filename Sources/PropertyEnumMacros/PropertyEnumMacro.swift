@@ -46,7 +46,7 @@ public struct PropertySubscriptProtocolMacro: PeerMacro {
     }
 }
 
-public struct PropertyIgnoreMacro: MemberAttributeMacro {
+public struct PropertyIgnoreMacro: PeerMacro {
     public static func expansion(of node: AttributeSyntax, attachedTo declaration: some DeclGroupSyntax, providingAttributesFor member: some DeclSyntaxProtocol, in context: some MacroExpansionContext) throws -> [AttributeSyntax] {
         return []
     }
